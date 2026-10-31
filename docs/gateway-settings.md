@@ -9,7 +9,9 @@ What adorouter's gateway needs beyond upstream's defaults. Names only: real valu
 | `SQL_DSN` | Postgres. The database must be UTF-8 |
 | `REDIS_CONN_STRING` | Required, because website sign-in crosses to the gateway |
 | `SESSION_SECRET`, `CRYPTO_SECRET` | Sessions |
-| `TOKEN_KEY_PEPPER`, `TOKEN_KEY_ENC_KEY`, `CHANNEL_KEY_ENC_KEY` | Encrypt API and provider keys. The gateway won't start without them, and losing them invalidates every key |
+| `TOKEN_KEY_PEPPER`, `TOKEN_KEY_ENC_KEY`, `CHANNEL_KEY_ENC_KEY` | Encrypt API and provider keys. Each must be 32 bytes in base64. The gateway won't start without them, and losing them invalidates every key |
+| `ADO_SITE_URL` | Where the API address sends visitors, and upstream's public console pages. `compose.yml` sets it |
+| `TRUSTED_PROXIES` | Only the tunnel's network, so visitor IPs can't be forged. `compose.yml` sets it |
 | `REGISTER_IP_HASH_KEY`, `AUDIT_FINGERPRINT_KEY` | Keyed hashes for abuse checks and audit logs |
 | `BFF_SERVICE_TOKEN` | Same value on the website |
 | `DISCORD_GUILD_ID` | Sign-in refuses everyone without it |
@@ -30,7 +32,9 @@ Never set `DEBUG`, `POSTHOG_KEY`, `GOOGLE_ANALYTICS_ID`, `UMAMI_WEBSITE_ID` or `
 | `RegisterEnabled` | `true` | Discord sign-up creates accounts |
 | `PasswordRegisterEnabled`, `PasswordLoginEnabled` | `false` | See `admin-access.md` for the order |
 | `GroupRatio` | `{"default":1.25,"svip":1.25,"vip":1.25}` | The +25% markup. Every group carries it, so no group is a cheaper way in |
-| `UserUsableGroups` | `{"default":"default"}` | Users can't choose another price group |
+| `UserUsableGroups` | `{"default":"default","auto":"auto"}` | Users can't choose another price group. `auto` must stay: the website's key uses it, and it resolves to `default` |
+| `SystemName` | `adorouter` | Name on the gateway console and its sign-in page |
+| `Logo` | `https://adorouter.com/images/logo/logo.svg` | Logo on the same pages |
 | `ReferralCommissionEnabled` | `true` | Affiliate programme |
 | `ReferralCommissionPercent` | `5` | The stack's default of 10 leaves almost no margin on small top-ups |
 | `ReferralCommissionMaxRecharges` | `3` | Commission on a referred user's first 3 top-ups |
