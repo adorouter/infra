@@ -1,0 +1,26 @@
+name: Monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      # Status pages only. Never a model request, which would spend provider credit.
+      - name: Check the site and API
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_ALERT_WEBHOOK }}
+        run: |
+          failed=""
+          for url in https://adorouter.com/ https://api.adorouter.com/api/status; do
+            curl -fsS --retry 2 --retry-delay 20 --max-time 20 -o /dev/null "$url" || failed="$failed $url"
+          done
+          [ -z "$failed" ] && exit 0
+          [ -n "$WEBHOOK" ] && curl -fsS -H 'Content-Type: application/json' \
+            -d "{\"content\":\"adorouter is failing:$failed\"}" "$WEBHOOK"
+          exit 1
