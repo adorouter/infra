@@ -1,0 +1,66 @@
+# A throwaway gateway for tests/promises.mjs, on real Postgres and Redis.
+# The secrets here protect nothing: the whole stack is deleted after each run.
+name: adorouter-promises
+
+services:
+  gateway:
+    image: ${GATEWAY_IMAGE:-adorouter-gateway:test}
+    environment:
+      SQL_DSN: postgres://adorouter:test@postgres:5432/adorouter?sslmode=disable
+      REDIS_CONN_STRING: redis://redis:6379/0
+      ADO_SITE_URL: https://adorouter.com
+      SESSION_SECRET: test-session-secret-test-session-secret
+      CRYPTO_SECRET: test-crypto-secret-test-crypto-secret-00
+      TOKEN_KEY_PEPPER: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE=
+      TOKEN_KEY_ENC_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=
+      CHANNEL_KEY_ENC_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM=
+      REGISTER_IP_HASH_KEY: 0000000000000000000000000000000000000000000000000000000000000004
+      AUDIT_FINGERPRINT_KEY: 0000000000000000000000000000000000000000000000000000000000000005
+      BFF_SERVICE_TOKEN: test-bff-token
+      ADO_FINGERPRINT_KEY: test-fingerprint-key
+      DISCORD_GUILD_ID: "1"
+      TRUSTED_PROXIES: none
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/status"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: adorouter
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: adorouter
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adorouter -d adorouter"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  tester:
+    image: node:24-alpine
+    working_dir: /tests
+    volumes:
+      - ./:/tests:ro
+    environment:
+      GATEWAY_URL: http://gateway:3000
+      UPSTREAM_HOST: tester
+      DB_URL: postgres://adorouter:test@postgres:5432/adorouter
+      PG_MODULE_DIR: /tmp/deps
+      EXPECT_SITE_URL: https://adorouter.com
+    command: ["sh", "-c", "mkdir -p /tmp/deps && cd /tmp/deps && npm install --silent --no-audit --no-fund pg@8.13.1 && cd /tests && node promises.mjs"]
+    depends_on:
+      gateway: { condition: service_healthy }

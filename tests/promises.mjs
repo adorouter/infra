@@ -1,11 +1,12 @@
 // Checks the promises on adorouter's legal pages against a running gateway.
-// Prints no keys, tokens or passwords. Never point this at production.
+// Prints no keys, tokens or passwords. Needs a brand new gateway, so run it with
+// tests/run-promises.sh, which starts and removes one. Never point this at production.
 //
-//   GATEWAY_URL   gateway base URL (default http://127.0.0.1:13000)
-//   ADMIN_USER    root admin username
-//   ADMIN_PASS    root admin password
-//   DB_URL        optional Postgres URL, to search stored data for the test prompt
-//   PG_MODULE_DIR optional directory holding node_modules/pg, needed with DB_URL
+//   GATEWAY_URL     gateway base URL (default http://127.0.0.1:13000)
+//   UPSTREAM_HOST   how the gateway reaches this script (default 127.0.0.1)
+//   DB_URL          optional Postgres URL, to search stored data for the test prompt
+//   PG_MODULE_DIR   optional directory holding node_modules/pg, needed with DB_URL
+//   EXPECT_SITE_URL optional, the gateway's ADO_SITE_URL, to check its redirects
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { randomBytes } from "node:crypto";
@@ -41,10 +42,17 @@ const upstream = createServer((req, res) => {
     res.end(JSON.stringify({ id: "c", object: "chat.completion", model: MODEL, choices: [{ index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" }], usage: { prompt_tokens: 10, completion_tokens: 1, total_tokens: 11 } }));
   });
 });
-await new Promise((r) => upstream.listen(0, "127.0.0.1", r));
-const upstreamUrl = `http://127.0.0.1:${upstream.address().port}`;
+await new Promise((r) => upstream.listen(0, "0.0.0.0", r));
+const upstreamUrl = `http://${process.env.UPSTREAM_HOST ?? "127.0.0.1"}:${upstream.address().port}`;
 
-const login = await (await fetch(`${GW}/api/user/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: process.env.ADMIN_USER, password: process.env.ADMIN_PASS }) })).json();
+// A new gateway is the only place a password admin can exist: the setup wizard makes
+// one, and password login goes off straight after, as on a real deployment.
+const ADMIN_USER = "promiseadmin";
+const ADMIN_PASS = randomBytes(24).toString("hex");
+const jsonPost = async (path, body) => (await fetch(GW + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
+const setup = await jsonPost("/api/setup", { username: ADMIN_USER, password: ADMIN_PASS, confirmPassword: ADMIN_PASS, SelfUseModeEnabled: false, DemoSiteEnabled: false });
+if (!setup.success) { console.log("setup failed:", setup.message, "(this test needs a brand new gateway)"); process.exit(1); }
+const login = await jsonPost("/api/user/login", { username: ADMIN_USER, password: ADMIN_PASS });
 if (!login.success) { console.log("admin login failed:", login.message); process.exit(1); }
 const adminHeaders = { Authorization: `Bearer ${login.data.access_token}`, "New-Api-User": String(login.data.user.id), "Content-Type": "application/json" };
 const api = async (method, path, body) => {
@@ -54,6 +62,20 @@ const api = async (method, path, body) => {
 
 let channelId, tokenId;
 try {
+  // The settings from docs/gateway-settings.md that these promises depend on.
+  const settings = {
+    GroupRatio: JSON.stringify({ default: 1.25, svip: 1.25, vip: 1.25 }),
+    UserUsableGroups: JSON.stringify({ default: "default", auto: "auto" }),
+    PasswordRegisterEnabled: "false",
+    PasswordLoginEnabled: "false",
+    QuotaForNewUser: "0",
+    QuotaForInviter: "0",
+    QuotaForInvitee: "0",
+  };
+  for (const [key, value] of Object.entries(settings)) {
+    const set = await api("PUT", "/api/option/", { key, value });
+    if (!set.success) throw new Error(`set ${key}: ${set.message}`);
+  }
   const added = await api("POST", "/api/channel/", { mode: "single", channel: { name: CHANNEL, type: 1, key: "capture-key", base_url: upstreamUrl, models: MODEL, group: "default", status: 1 } });
   if (!added.success) throw new Error(`add channel: ${added.message}`);
   const channels = await api("GET", "/api/channel/?p=1&page_size=100");
@@ -142,10 +164,33 @@ try {
   check("password registration is off", options.PasswordRegisterEnabled === "false");
   const reg = await (await fetch(`${GW}/api/user/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: `p${Date.now() % 1e8}`, password: "Promise-test-1234", password2: "Promise-test-1234" }) })).json().catch(() => ({ success: false }));
   check("password sign-up is refused", reg.success === false, reg.message ?? "");
+  const relogin = await jsonPost("/api/user/login", { username: ADMIN_USER, password: ADMIN_PASS }).catch(() => ({ success: false }));
+  check("password login is refused", relogin.success !== true, relogin.message ?? "");
+
+  // The website's keys use the auto group, and it must still charge the markup.
+  const autoName = `promise-auto-${Date.now()}`;
+  await api("POST", "/api/token/", { name: autoName, expired_time: -1, remain_quota: 0, unlimited_quota: true, group: "auto" });
+  const autoId = ((await api("GET", "/api/token/?p=1&size=100")).data?.items ?? []).find((t) => t.name === autoName)?.id;
+  const autoRaw = String((await api("POST", `/api/token/${autoId}/key`)).data?.key ?? "");
+  const auto = await fetch(`${GW}/v1/chat/completions`, { method: "POST", headers: { Authorization: `Bearer ${autoRaw.startsWith("sk-") ? autoRaw : `sk-${autoRaw}`}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, messages: [{ role: "user", content: "probe" }] }) });
+  await auto.text();
+  check("a website key in the auto group works", auto.ok, `status ${auto.status}`);
+  await new Promise((r) => setTimeout(r, 4000));
+  const autoLog = ((await api("GET", `/api/log/?p=1&page_size=5&type=2&token_name=${autoName}`)).data?.items ?? [])[0];
+  check("the auto group charges the +25% markup", JSON.parse(autoLog?.other ?? "{}").group_ratio === 1.25, `group_ratio ${JSON.parse(autoLog?.other ?? "{}").group_ratio}`);
+  await api("DELETE", `/api/token/${autoId}`);
+
+  // Visitors to the API's address get the website, not upstream's public pages.
+  if (process.env.EXPECT_SITE_URL) {
+    const home = await fetch(`${GW}/`, { redirect: "manual" });
+    check("the API's address sends visitors to the website", home.status === 302 && home.headers.get("location") === process.env.EXPECT_SITE_URL, `status ${home.status}`);
+    const callback = await fetch(`${GW}/oauth/discord`, { redirect: "manual" });
+    check("the Discord callback page stays reachable", callback.status === 200, `status ${callback.status}`);
+  }
 
   // No trackers in the admin console's HTML. Upstream leaves empty comments as
   // injection points, so look at what actually loads rather than at the words.
-  const html = await (await fetch(`${GW}/`)).text();
+  const html = await (await fetch(`${GW}/sign-in`)).text();
   const noComments = html.replace(/<!--[\s\S]*?-->/g, "");
   const external = [...noComments.matchAll(/<script[^>]*\bsrc=["'](https?:)?\/\/[^"']+/gi)].map((m) => m[0]);
   check("console page loads no external scripts", external.length === 0, external.join(" "));
