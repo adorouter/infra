@@ -1,6 +1,10 @@
 .env
 .env.*
 !env.example
+gateway.env
+site.env
+compose.override.yml
+*.key
 *.age
 *.dump
 *.sql.gz

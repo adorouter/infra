@@ -10,15 +10,16 @@ set +a
 
 name="adorouter-$(date -u +%Y%m%dT%H%M%SZ)"
 work="$(mktemp -d)"
+plain="$(mktemp)"
 sealed="$(mktemp)"
-trap 'rm -rf "$work" "$sealed"' EXIT
+# On every exit, because $plain holds the database and secrets unencrypted.
+trap 'rm -rf "$work" "$plain" "$sealed"' EXIT
 
 docker compose exec -T postgres pg_dump -U adorouter -d adorouter --format=custom > "$work/db.dump"
 # The keys in gateway.env decrypt everything in the dump, so restoring needs both.
 cp .env gateway.env site.env "$work/"
-tar -C "$work" -cf - . > "$work.tar"
-age -r "$BACKUP_AGE_RECIPIENT" -o "$sealed" "$work.tar"
-rm -f "$work.tar"
+tar -C "$work" -cf - . > "$plain"
+age -r "$BACKUP_AGE_RECIPIENT" -o "$sealed" "$plain"
 
 # The checksum settings keep newer AWS CLIs compatible with Cloudflare R2.
 docker run --rm -i -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION=auto \
