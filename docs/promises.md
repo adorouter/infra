@@ -11,7 +11,8 @@ What the legal pages promise, and what checks each promise. `tests/promises.mjs`
 | No analytics or trackers | `promises.mjs`: console page. The website has no automated test yet |
 | Providers get no visitor IP, cookies or adorouter key | `promises.mjs`: a fake provider captures what it receives, streamed and not |
 | Provider cookies and headers don't reach users | `promises.mjs`, `new-api/service/ado_response_headers_test.go` |
-| Discord only, server membership and verified email required | `new-api/oauth/ado_discord_policy_test.go`, and `promises.mjs` for password sign-up and login |
+| Discord sign-in needs a verified email | `new-api/oauth/ado_discord_policy_test.go` |
+| Password accounts work, and get no free credit | `promises.mjs` |
 | Deleting an account really deletes it | `new-api/model/ado_account_purge_test.go` |
 | Usage logs are metadata only | `promises.mjs`: no prompt, IP or client fingerprint |
 | Usage logs go after 90 days | `new-api/service/ado_log_retention.go`. Not covered by `promises.mjs` |

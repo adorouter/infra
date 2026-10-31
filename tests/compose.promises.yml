@@ -18,7 +18,6 @@ services:
       AUDIT_FINGERPRINT_KEY: 0000000000000000000000000000000000000000000000000000000000000005
       BFF_SERVICE_TOKEN: test-bff-token
       ADO_FINGERPRINT_KEY: test-fingerprint-key
-      DISCORD_GUILD_ID: "1"
       TRUSTED_PROXIES: none
     depends_on:
       postgres: { condition: service_healthy }

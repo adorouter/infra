@@ -14,7 +14,6 @@ What adorouter's gateway needs beyond upstream's defaults. Names only: real valu
 | `TRUSTED_PROXIES` | Only the tunnel's network, so visitor IPs can't be forged. `compose.yml` sets it |
 | `REGISTER_IP_HASH_KEY`, `AUDIT_FINGERPRINT_KEY` | Keyed hashes for abuse checks and audit logs |
 | `BFF_SERVICE_TOKEN` | Same value on the website |
-| `DISCORD_GUILD_ID` | Sign-in refuses everyone without it |
 | `OAUTH_ALLOWED_REDIRECT_ORIGINS` | The website's origin, for example `https://adorouter.com` |
 | `ADO_FINGERPRINT_KEY` | Signup credit. Without it nobody gets credit. **Changing it allows every Discord account a second grant** |
 | `ADO_SIGNUP_GRANT_USD` | Optional, default `0.5`. `0` turns the grant off |
@@ -30,10 +29,16 @@ Never set `DEBUG`, `POSTHOG_KEY`, `GOOGLE_ANALYTICS_ID`, `UMAMI_WEBSITE_ID` or `
 | `ServerAddress` | The API's public address | Discord's redirect is built from it |
 | `discord.client_id`, `discord.client_secret`, then `discord.enabled` | Your production Discord app | In that order, or enabling is refused |
 | `RegisterEnabled` | `true` | Discord sign-up creates accounts |
-| `PasswordRegisterEnabled`, `PasswordLoginEnabled` | `false` | See `admin-access.md` for the order |
+| `PasswordRegisterEnabled`, `PasswordLoginEnabled` | `true` | Website sign-up and sign-in with an email and password |
+| `FrontendAddress` | `https://adorouter.com` | Password reset emails link to the website, not the gateway |
+| `EmailProvider`, `ResendApiKey`, `ResendFrom` | `resend`, your key, `AdoRouter <noreply@adorouter.com>` | Sends verification and reset emails. Set this first, or nobody can register once verification is on |
+| `EmailVerificationEnabled` | `true` | Sign-up confirms the email address, so accounts can reset passwords |
+| `TurnstileSiteKey`, `TurnstileSecretKey`, then `TurnstileCheckEnabled` | Your Cloudflare widget, `true` | Bot protection on sign-in and sign-up |
+| `GitHubClientId`, `GitHubClientSecret`, then `GitHubOAuthEnabled` | Your GitHub OAuth app, `true` | Redirect: `https://api.adorouter.com/oauth/github` |
+| Google client ID, client secret, enabled | Your Google OAuth client | Redirect: `https://api.adorouter.com/oauth/google` |
 | `GroupRatio` | `{"default":1.25,"svip":1.25,"vip":1.25}` | The +25% markup. Every group carries it, so no group is a cheaper way in |
 | `UserUsableGroups` | `{"default":"default","auto":"auto"}` | Users can't choose another price group. `auto` must stay: the website's key uses it, and it resolves to `default` |
-| `SystemName` | `adorouter` | Name on the gateway console and its sign-in page |
+| `SystemName` | `AdoRouter` | Name on the gateway console and its sign-in page |
 | `Logo` | `https://adorouter.com/images/logo/logo.svg` | Logo on the same pages |
 | `ReferralCommissionEnabled` | `true` | Affiliate programme |
 | `ReferralCommissionPercent` | `5` | The stack's default of 10 leaves almost no margin on small top-ups |

@@ -45,8 +45,7 @@ const upstream = createServer((req, res) => {
 await new Promise((r) => upstream.listen(0, "0.0.0.0", r));
 const upstreamUrl = `http://${process.env.UPSTREAM_HOST ?? "127.0.0.1"}:${upstream.address().port}`;
 
-// A new gateway is the only place a password admin can exist: the setup wizard makes
-// one, and password login goes off straight after, as on a real deployment.
+// The setup wizard only runs on a new gateway, and it makes the admin this test uses.
 const ADMIN_USER = "promiseadmin";
 const ADMIN_PASS = randomBytes(24).toString("hex");
 const jsonPost = async (path, body) => (await fetch(GW + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
@@ -66,8 +65,6 @@ try {
   const settings = {
     GroupRatio: JSON.stringify({ default: 1.25, svip: 1.25, vip: 1.25 }),
     UserUsableGroups: JSON.stringify({ default: "default", auto: "auto" }),
-    PasswordRegisterEnabled: "false",
-    PasswordLoginEnabled: "false",
     QuotaForNewUser: "0",
     QuotaForInviter: "0",
     QuotaForInvitee: "0",
@@ -161,11 +158,15 @@ try {
   const options = Object.fromEntries(((await api("GET", "/api/option/")).data ?? []).map((o) => [o.key, o.value]));
   check("Creem prompt moderation is off", options.CreemModerationEnabled !== "true");
   check("Stripe text moderation is off", options.StripeTextModerationEnabled !== "true");
-  check("password registration is off", options.PasswordRegisterEnabled === "false");
-  const reg = await (await fetch(`${GW}/api/user/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: `p${Date.now() % 1e8}`, password: "Promise-test-1234", password2: "Promise-test-1234" }) })).json().catch(() => ({ success: false }));
-  check("password sign-up is refused", reg.success === false, reg.message ?? "");
-  const relogin = await jsonPost("/api/user/login", { username: ADMIN_USER, password: ADMIN_PASS }).catch(() => ({ success: false }));
-  check("password login is refused", relogin.success !== true, relogin.message ?? "");
+  // Password accounts work, but only Discord accounts can get the free credit.
+  const newUser = `p${Date.now() % 1e8}`;
+  const newPass = randomBytes(12).toString("hex");
+  const reg = await jsonPost("/api/user/register", { username: newUser, password: newPass, password2: newPass }).catch(() => ({ success: false }));
+  check("password sign-up works", reg.success === true, reg.message ?? "");
+  const newLogin = await jsonPost("/api/user/login", { username: newUser, password: newPass }).catch(() => ({ success: false }));
+  check("password sign-in works", newLogin.success === true, newLogin.message ?? "");
+  const found = ((await api("GET", `/api/user/search?keyword=${newUser}`)).data?.items ?? []).find((u) => u.username === newUser);
+  check("a password account gets no free credit", found?.quota === 0, `quota ${found?.quota}`);
 
   // The website's keys use the auto group, and it must still charge the markup.
   const autoName = `promise-auto-${Date.now()}`;
