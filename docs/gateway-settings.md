@@ -16,7 +16,7 @@ What adorouter's gateway needs beyond upstream's defaults. Names only: real valu
 | `BFF_SERVICE_TOKEN` | Same value on the website |
 | `OAUTH_ALLOWED_REDIRECT_ORIGINS` | The website's origin, for example `https://adorouter.com` |
 | `ADO_FINGERPRINT_KEY` | Signup credit. Without it nobody gets credit. **Changing it allows every Discord account a second grant** |
-| `ADO_SIGNUP_GRANT_USD` | Optional, default `0.5`. `0` turns the grant off |
+| `ADO_SIGNUP_GRANT_USD` | Set to `0`, which turns the grant off. **If it's missing, the code pays `0.5`** |
 | `ADO_SIGNUP_GRANT_DAILY_LIMIT` | Optional, default `20` per rolling 24 hours, so at most $10 a day at the default grant |
 | `ADO_ALERT_WEBHOOK_URL` | Optional Discord webhook, used when the daily limit is reached |
 
