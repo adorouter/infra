@@ -1,0 +1,57 @@
+﻿# AdoRouter's production sync config, mounted into the sync container by
+# compose.yml. Secrets, upstream addresses and upstream names come from sync.env
+# on the server, never from this file: which upstreams serve us stays private.
+#
+# Prices: model prices are official list prices. Marketplace lanes are 2x the
+# merchant's price (docs/gateway-settings.md, Pricing).
+
+target:
+  # The gateway over the sync network. It accepts the sync token from there only.
+  baseUrl: ${ADOROUTER_SYNC_TARGET:-http://gateway:3000}
+  systemAccessToken: ${ADOROUTER_SYNC_TOKEN}
+  userId: 1
+
+# Text models only: image and video need Creem's moderation and a privacy
+# change first.
+testModelTypes: ["text"]
+
+# Never publish a lane that costs as much as the official price or more.
+skipUnprofitableText: true
+
+# Models and merchants dropped before anything else.
+blacklist:
+  - nsfw
+  # Not chat models, and their marketplace lanes sat at or above list price.
+  - "*embedding*"
+  - codex-auto-review
+  # No Kiro merchants, for any model.
+  - m1/*kiro*
+
+providers:
+  # m1: a marketplace of many merchants (address in sync.env). One lane per
+  # merchant per model, named m1-<listing>-<model>.
+  - type: a7
+    name: m1
+    baseUrl: ${M1_BASE_URL}
+    systemAccessToken: ${M1_ACCESS_TOKEN}
+    userId: ${M1_USER_ID}
+    # Only merchants that put down an authenticity deposit, which they forfeit
+    # for swapping the model.
+    guaranteedOnly: true
+    # Retail = merchant price x 2. A lane is only published when that comes to
+    # 80% of the official list price or less, so every lane is at least 20% off.
+    profitMultiple: 2
+    maxSellFraction: 0.8
+    # Up to three merchants per model, cheapest first, so one failing merchant
+    # does not take the model down.
+    hostsPerModel:
+      default: 3
+    # Data policy for the site's labels and consent dialog. No company, country
+    # or privacy policy is published, so it is treated as a provider outside the
+    # EU without safeguards that may keep or train on prompts: EU users are asked
+    # for consent first. providerName is internal and never shown publicly.
+    providerName: ${M1_PROVIDER_NAME:-m1}
+    seatCountry: CN
+    prompts: unknown
+    transfer: none
+    perUpstreamConcurrency: 2

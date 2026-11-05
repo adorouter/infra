@@ -3,6 +3,8 @@
 !env.example
 gateway.env
 site.env
+sync.env
+sync/logs/
 compose.override.yml
 *.key
 *.age

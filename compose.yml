@@ -12,6 +12,9 @@ services:
       REDIS_CONN_STRING: redis://:${REDIS_PASSWORD:?}@redis:6379/0
       # Only the tunnel can reach this service, so it's the only proxy to believe.
       TRUSTED_PROXIES: 172.30.0.0/24
+      # The sync's own network, and nothing else: the gateway accepts
+      # SYNC_SERVICE_TOKEN only from here. The tunnel's network is never trusted.
+      TRUSTED_NETWORKS: 172.31.0.0/29
       ADO_SITE_URL: https://adorouter.com
       TZ: UTC
     volumes:
@@ -25,7 +28,24 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
-    networks: [internal]
+    networks: [internal, sync]
+
+  # new-api-sync, run by hand only (the "sync" profile keeps it out of `up`):
+  #   docker compose --profile sync run --rm sync run --only m1 --type text --dry-run
+  # See docs/sync.md. It talks to the gateway over its own network only.
+  sync:
+    image: adorouter-sync:${SYNC_COMMIT:-local}
+    profiles: [sync]
+    env_file: sync.env
+    working_dir: /app
+    volumes:
+      - ./sync/config.yml:/app/config.yml:ro
+      # Test verdicts and run reports. Kept between runs so a lane that passed
+      # is not paid for again; owned by the image's user (65532).
+      - ./sync/logs:/app/logs
+    depends_on:
+      gateway: { condition: service_healthy }
+    networks: [sync]
 
   site:
     image: ghcr.io/adorouter/adorouter:${SITE_COMMIT:?set SITE_COMMIT in .env}
@@ -89,3 +109,8 @@ networks:
     ipam:
       config:
         - subnet: 172.30.0.0/24
+  # Only the gateway and the sync join this network.
+  sync:
+    ipam:
+      config:
+        - subnet: 172.31.0.0/29
