@@ -17,4 +17,4 @@ What the legal pages promise, and what checks each promise. `tests/promises.mjs`
 | Usage logs are metadata only | `promises.mjs`: no prompt, IP or client fingerprint |
 | Usage logs go after 90 days | `new-api/service/ado_log_retention.go`. Not covered by `promises.mjs` |
 | One signup grant per Discord account | `new-api/service` and `new-api/model` signup grant tests |
-| Prices are list +25%, including website keys | `promises.mjs`: the `auto` group charges a ratio of 1.25 |
+| Official providers (the `default` group) are list +25%, including website keys. Reseller groups are their cost × 1.25, set by hand (`gateway-settings.md`, Pricing) | `promises.mjs`: the `auto` group charges a ratio of 1.25 when it resolves to `default`. Reseller ratios have no automated check |

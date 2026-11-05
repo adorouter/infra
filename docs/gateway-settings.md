@@ -36,8 +36,10 @@ Never set `DEBUG`, `POSTHOG_KEY`, `GOOGLE_ANALYTICS_ID`, `UMAMI_WEBSITE_ID` or `
 | `TurnstileSiteKey`, `TurnstileSecretKey`, then `TurnstileCheckEnabled` | Your Cloudflare widget, `true` | Bot protection on sign-in and sign-up |
 | `GitHubClientId`, `GitHubClientSecret`, then `GitHubOAuthEnabled` | Your GitHub OAuth app, `true` | Redirect: `https://api.adorouter.com/oauth/github` |
 | Google client ID, client secret, enabled | Your Google OAuth client | Redirect: `https://api.adorouter.com/oauth/google` |
-| `GroupRatio` | `{"default":1.25,"svip":1.25,"vip":1.25}` | The +25% markup. Every group carries it, so no group is a cheaper way in |
-| `UserUsableGroups` | `{"default":"default","auto":"auto"}` | Users can't choose another price group. `auto` must stay: the website's key uses it, and it resolves to `default` |
+| `GroupRatio` | `{"default":1.25,"svip":1.25,"vip":1.25}`, plus one entry per reseller group | `default` holds official providers that charge list price, so it carries the +25%. A reseller group's ratio is what that reseller charges as a share of list, times 1.25 (see Pricing) |
+| `UserUsableGroups` | `{"default":"default","auto":"auto"}`, plus each reseller group | `auto` must stay: the website's key uses it. Auto only routes to groups listed here, so each reseller group needs an entry |
+| `AutoGroups` | Reseller groups, cheapest ratio first, then `default` | Auto takes the first group that serves the model. Cheapest first means a request pays the price the site shows |
+| `ShowOriginalPriceEnabled` | `true` | Shows the official price crossed out, with the discount, when a model's cheapest group has a ratio below 1. In the console under Currency & Display |
 | `SystemName` | `AdoRouter` | Name on the gateway console and its sign-in page |
 | `Logo` | `https://adorouter.com/images/logo/logo.svg` | Logo on the same pages |
 | `ReferralCommissionEnabled` | `true` | Affiliate programme |
@@ -49,5 +51,13 @@ Never set `DEBUG`, `POSTHOG_KEY`, `GOOGLE_ANALYTICS_ID`, `UMAMI_WEBSITE_ID` or `
 Payments also need the admin to confirm the payment compliance statement in the console, or top-ups stay disabled. That's a legal statement, so read it first.
 
 ## Pricing
+
+Decided 2026-11-05: the margin is 25% over what a provider costs us, not over list.
+
+- **Model prices are official list prices.** Sync them from the models.dev or official preset. They are what the site shows crossed out.
+- **Each reseller lane is its own group.** Its ratio is `reseller price ÷ list price × 1.25`. A reseller at 40% of list gets `0.5`, so customers pay half of list and the site shows 50% off.
+- **A ratio of 1.25 or more is not a discount.** A reseller that charges list or more isn't worth adding, because official providers are just as cheap.
+- **Marketplace lanes (`m1`) are 2× the merchant's price** (`profitMultiple: 2` in `sync/config.yml`), and a lane is only published at 80% of list or less. The sync sets these groups, so don't edit them by hand.
+- **Check one request after adding a group.** Compare what the reseller charged on its own dashboard against what the usage log charged the customer.
 
 The gateway's built-in DeepSeek prices matched the published list on 2026-10-30. DeepSeek changes prices, so compare them when it announces a change. `deepseek-flash` and `deepseek-v4-pro` bill half price off-peak.
