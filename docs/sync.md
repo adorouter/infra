@@ -89,6 +89,22 @@ Over SSH:
 
 Merchants change their prices and drop out often, so run it again every few days. Scheduling it would send paid tests on its own, so that needs a decision first.
 
+## Preview without a funded account
+
+`--preview` works out the lanes like a dry run (no keys, pins or tests on the marketplace, no cost) and then writes them to the gateway with a placeholder key, so the site shows the models and prices. **Every request to those lanes fails** until a real run, and customers can pick them in the meantime.
+
+```bash
+docker compose --profile sync run --rm sync run --only m1 --type text --preview
+```
+
+**Remove the preview lanes before the first real run.** A real run keeps each lane's on/off state, and the gateway switches off lanes whose requests fail, so a leftover placeholder lane would stay off.
+
+```bash
+docker compose --profile sync run --rm sync reset --only m1
+```
+
 ## Undo
 
-`docker compose --profile sync run --rm sync reset` deletes everything the sync created. That is destructive: run it only on purpose.
+`docker compose --profile sync run --rm sync reset --only m1` deletes the marketplace lanes and their models, and nothing else.
+
+**Never run `reset` without `--only m1`.** On its own it deletes every channel with a tag and wipes all model prices and price groups on the gateway.
