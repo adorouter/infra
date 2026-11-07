@@ -67,6 +67,18 @@ Over SSH:
    docker compose up -d gateway
    ```
 
+7. Let the sync create channels. The gateway gives the sync its own identity, `user:900000001`, and creating a channel needs a permission that admins don't get by default. Without it every channel create fails with "no response":
+
+   ```bash
+   docker compose exec -T postgres psql -U adorouter -d adorouter -c "INSERT INTO casbin_rule (ptype, v0, v1, v2, v3, v4, v5) VALUES ('p', 'user:900000001', 'channel', 'sensitive_write', 'allow', '', '') ON CONFLICT DO NOTHING;"
+   ```
+
+   Then restart the gateway so it loads the permission:
+
+   ```bash
+   docker compose restart gateway
+   ```
+
 ## Every run
 
 1. **Dry run first.** It changes nothing and costs nothing:
