@@ -26,9 +26,6 @@ blacklist:
   - codex-auto-review
   # No Kiro merchants, for any model.
   - m1/*kiro*
-  # DeepSeek stays on the official DeepSeek channel: the marketplace's cheaper
-  # lanes would take its traffic and replace its off-peak pricing.
-  - deepseek-*
 
 providers:
   # m1: a marketplace of many merchants (address in sync.env). One lane per
