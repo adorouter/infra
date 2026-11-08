@@ -31,7 +31,7 @@ services:
     networks: [internal, sync]
 
   # new-api-sync, run by hand only (the "sync" profile keeps it out of `up`):
-  #   docker compose --profile sync run --rm sync run --only m1 --type text --dry-run
+  #   docker compose --profile sync run --rm sync run --only m1 --dry-run
   # See docs/sync.md. It talks to the gateway over its own network only.
   sync:
     image: adorouter-sync:${SYNC_COMMIT:-local}

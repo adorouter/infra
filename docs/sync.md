@@ -85,15 +85,17 @@ Over SSH:
 1. **Dry run first.** It changes nothing and costs nothing:
 
    ```bash
-   docker compose --profile sync run --rm sync run --only m1 --type text --dry-run
+   docker compose --profile sync run --rm sync run --only m1 --dry-run
    ```
 
    The end of the output lists the lanes it would add (`Channels: +N`) and every model's price.
 
 2. **Real run.** This creates one key and one pin per lane on the marketplace, and sends a few short test requests to each lane, paid from the marketplace balance. Top it up first, because the run stops when the balance is empty.
 
+   Don't add `--type` or `--models` to a real run. A filtered run deletes no lanes and cleans up no keys, so lanes that failed their tests would stay live. The sync already walks text models only (`testModelTypes` in `sync/config.yml`).
+
    ```bash
-   docker compose --profile sync run --rm sync run --only m1 --type text
+   docker compose --profile sync run --rm sync run --only m1
    ```
 
 3. **Check it.**
@@ -119,7 +121,7 @@ Check it with `tail /var/log/adorouter-price-notices.log`: each run ends with `p
 `--preview` works out the lanes like a dry run (no keys, pins or tests on the marketplace, no cost) and then writes them to the gateway with a placeholder key, so the site shows the models and prices. **Every request to those lanes fails** until a real run, and customers can pick them in the meantime.
 
 ```bash
-docker compose --profile sync run --rm sync run --only m1 --type text --preview
+docker compose --profile sync run --rm sync run --only m1 --preview
 ```
 
 **Remove the preview lanes before the first real run.** A real run keeps each lane's on/off state, and the gateway switches off lanes whose requests fail, so a leftover placeholder lane would stay off.
