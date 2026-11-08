@@ -45,9 +45,12 @@ providers:
     baseUrl: ${M1_BASE_URL}
     systemAccessToken: ${M1_ACCESS_TOKEN}
     userId: ${M1_USER_ID}
-    # Only merchants that put down an authenticity deposit, which they forfeit
-    # for swapping the model.
-    guaranteedOnly: true
+    # Merchants with and without an authenticity deposit (decided 2026-11-08).
+    # Only about 1 listing in 20 carries one, and every lane passes the same
+    # authenticity checks before it is served, which caught fakers among
+    # deposit holders too. Set guaranteedOnly: true to go back to deposit
+    # holders only.
+    guaranteedOnly: false
     # Retail = merchant price x 2. A lane is only published when that comes to
     # 80% of the official list price or less, so every lane is at least 20% off.
     profitMultiple: 2
