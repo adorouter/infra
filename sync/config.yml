@@ -18,6 +18,16 @@ testModelTypes: ["text"]
 # Never publish a lane that costs as much as the official price or more.
 skipUnprofitableText: true
 
+# Authenticity checks that only log, per model maker. Claude lanes are not
+# rejected for refusing the Tiananmen question (censored-history, decided
+# 2026-11-08): the finding is still written to the observe log. The question is
+# still asked, because fake-200 reads the same answer to catch platform content
+# filters on every maker. Naming a maker here replaces its defaults, and
+# anthropic's default is to enforce every rule, so only this one is relaxed.
+authenticity:
+  observeOnly:
+    anthropic: ["censored-history"]
+
 # Models and merchants dropped before anything else.
 blacklist:
   - nsfw
