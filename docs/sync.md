@@ -4,8 +4,9 @@
 marketplace, called `m1` in `sync/config.yml`, whose address and account live in
 `sync.env` only, so which upstreams serve us stays out of git. One lane per merchant per model,
 named like `m1-1234-gemini-4-argon`, at 2× the merchant's price and at least 20%
-below list. It runs on the server by hand, never on a schedule, because a real
-run sends paid test requests.
+below list. Full runs happen on the server by hand, never on a schedule, because a
+real run sends paid test requests. The only scheduled part is accepting price
+changes (below), which sends none.
 
 The gateway accepts the sync's token only from the `sync` network in
 `compose.yml`, which holds the gateway and the sync and nothing else.
@@ -100,6 +101,18 @@ Over SSH:
    - Send one request to a new lane. Compare what the marketplace deducted with what the usage log charged.
 
 Merchants change their prices and drop out often, so run it again every few days. Scheduling it would send paid tests on its own, so that needs a decision first.
+
+## Price changes between runs
+
+When a merchant raises its price, the marketplace pauses our pin and that lane fails every request until the change is accepted. `price-notices` accepts a rise only while the lane's current price still covers the new cost plus 25%, and leaves larger rises paused until the next full run reprices the lane. It sends no test requests and changes no prices on our side.
+
+Add it to root's crontab (`crontab -e`), every 30 minutes:
+
+```
+*/30 * * * * cd /opt/adorouter && docker compose --profile sync run --rm -T sync price-notices --only m1 >> /var/log/adorouter-price-notices.log 2>&1
+```
+
+Check it with `tail /var/log/adorouter-price-notices.log`: each run ends with `price changes accepted: N, left paused: N`.
 
 ## Preview without a funded account
 
