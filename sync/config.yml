@@ -36,6 +36,18 @@ blacklist:
   - codex-auto-review
   # No Kiro merchants, for any model.
   - m1/*kiro*
+  # Official model ids only (decided 2026-11-09). The marketplace also lists
+  # its own aliases: the reasoning effort in the name (gemini-3.5-flash-high,
+  # which is gemini-3.5-flash with reasoning_effort), merchant labels
+  # (-agent) and dated expiry labels. The real model is sold under its own
+  # name, and these patterns hit no official id on the site.
+  - "*-extra-low"
+  - "*-minimal"
+  - "*-low"
+  - "*-medium"
+  - "*-high"
+  - "*-agent"
+  - "*-expires-on-*"
 
 providers:
   # m1: a marketplace of many merchants (address in sync.env). One lane per
