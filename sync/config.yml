@@ -82,11 +82,15 @@ providers:
     perUpstreamConcurrency: 2
     # After the walk, every kept lane is asked three times for about 300
     # integers and ranked against lm-detector's bank of official routes
-    # (decided 2026-11-09). Observe only: results are logged to
-    # logs/number-fingerprint-<date>.jsonl and reject nothing. Each lane is
-    # measured again after a week; the pass stops after 30 minutes and the
-    # rest wait for the next run.
+    # (decided 2026-11-09), lanes whose model is in the bank first. Results
+    # go to logs/number-fingerprint-<date>.jsonl. Each lane is measured again
+    # after a week; the pass stops after 30 minutes and the rest wait for the
+    # next run. enforce (decided 2026-11-11): a lane whose model is in the
+    # bank is rejected for 30 days when two runs both read it as another model
+    # at 95% or more with two complete replies; for Claude only a lower tier
+    # or another family counts. Everything else only logs.
     numberFingerprint:
       budgetMinutes: 30
       retestDays: 7
       lanesInParallel: 2
+      enforce: true
